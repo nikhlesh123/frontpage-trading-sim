@@ -15,7 +15,7 @@ class Config:
     ANGELONE_API_KEY = os.environ.get('ANGELONE_API_KEY') or 'YOUR_API_KEY_HERE'  # User must provide
     ANGELONE_CLIENT_CODE = os.environ.get('ANGELONE_CLIENT_CODE') or 'YOUR_CLIENT_CODE_HERE'  # User must provide
     ANGELONE_PASSWORD = os.environ.get('ANGELONE_PASSWORD') or 'YOUR_PASSWORD_HERE'  # User must provide
-    ANGELONE_TOTP_SECRET = os.environ.get('ANGELONE_TOTP_SECRET') or 'YOUR_TOTP_SECRET_HERE'  # User must provide
+    ANGELONE_TOTP = os.environ.get('ANGELONE_TOTP') or 'YOUR_TOTP_SECRET_HERE'  # User must provide
     
     # Redis Configuration for Celery
     REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
