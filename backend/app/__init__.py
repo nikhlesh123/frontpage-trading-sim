@@ -12,6 +12,7 @@ from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import os
+import logging
 
 # Initialize Flask extensions
 db = SQLAlchemy()
@@ -29,12 +30,27 @@ def create_app(config_class):
     Returns:
         Flask: Configured Flask application instance
     """
-    # Path to React build directory
-    frontend_build_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'frontend', 'build'
-    ))
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
     
-    # Create Flask app instance with proper static folder configuration
+    # Path to React build directory - use absolute path for deployment
+    # This works for both local development and Render deployment
+    if os.environ.get('RENDER'):
+        # On Render, use absolute path from project root
+        frontend_build_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', '..', 'frontend', 'build'
+        ))
+    else:
+        # Local development - relative path
+        frontend_build_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', '..', 'frontend', 'build'
+        ))
+    
+    logger.info(f"Frontend build path: {frontend_build_path}")
+    logger.info(f"Frontend build path exists: {os.path.exists(frontend_build_path)}")
+    
+    # Create Flask app instance with explicit static folder configuration
     app = Flask(__name__, 
                 instance_relative_config=True,
                 static_folder=frontend_build_path,
@@ -107,19 +123,36 @@ def create_app(config_class):
     @app.route('/<path:path>')
     def serve_react_app(path):
         """Serve the React frontend for all non-API routes."""
+        logger.info(f"Serving path: {path}")
+        
         # If the path starts with 'api', it should be handled by API routes
         if path.startswith('api/'):
+            logger.warning(f"API endpoint not found: {path}")
             return {'error': 'API endpoint not found'}, 404
         
         # Try to serve static files first (JS, CSS, images, etc.)
         if path and '.' in path.split('/')[-1]:
             try:
-                return send_from_directory(frontend_build_path, path)
-            except:
+                file_path = os.path.join(frontend_build_path, path)
+                if os.path.exists(file_path):
+                    logger.info(f"Serving static file: {file_path}")
+                    return send_from_directory(frontend_build_path, path)
+                else:
+                    logger.warning(f"Static file not found: {file_path}")
+            except Exception as e:
+                logger.error(f"Error serving static file {path}: {e}")
                 # If file not found, fall through to serve index.html
                 pass
         
         # For all other paths, serve the React app's index.html
-        return send_from_directory(frontend_build_path, 'index.html')
+        index_path = os.path.join(frontend_build_path, 'index.html')
+        logger.info(f"Serving index.html from: {index_path}")
+        logger.info(f"Index.html exists: {os.path.exists(index_path)}")
+        
+        try:
+            return send_from_directory(frontend_build_path, 'index.html')
+        except Exception as e:
+            logger.error(f"Error serving index.html: {e}")
+            return {'error': 'Frontend not available'}, 404
     
     return app
