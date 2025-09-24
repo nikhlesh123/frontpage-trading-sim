@@ -2,5 +2,6 @@
 from .auth import auth_bp
 from .portfolio import portfolio_bp
 from .trading import trading_bp
+from .user import user_bp
 
-__all__ = ['auth_bp', 'portfolio_bp', 'trading_bp']
+__all__ = ['auth_bp', 'portfolio_bp', 'trading_bp', 'user_bp']
