@@ -29,8 +29,16 @@ def create_app(config_class):
     Returns:
         Flask: Configured Flask application instance
     """
-    # Create Flask app instance
-    app = Flask(__name__, instance_relative_config=True)
+    # Path to React build directory
+    frontend_build_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'frontend', 'build'
+    ))
+    
+    # Create Flask app instance with proper static folder configuration
+    app = Flask(__name__, 
+                instance_relative_config=True,
+                static_folder=frontend_build_path,
+                static_url_path='')
     
     # Load configuration
     app.config.from_object(config_class)
@@ -42,10 +50,15 @@ def create_app(config_class):
     mail.init_app(app)
     limiter.init_app(app)
     
-    # Configure CORS
+    # Configure CORS - allow production domains for deployed app
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+            "origins": [
+                "http://localhost:3000", 
+                "http://127.0.0.1:3000",
+                "https://*.onrender.com",  # Allow Render deployment domains
+                "https://*.herokuapp.com",  # Allow Heroku deployment domains
+            ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -89,13 +102,6 @@ def create_app(config_class):
     def health_check():
         return {'status': 'healthy', 'message': 'Frontpage Trading Sim API is running'}
     
-    # Serve React frontend static files
-    @app.route('/static/<path:filename>')
-    def serve_static(filename):
-        """Serve static files from the React build."""
-        static_folder = os.path.join(app.root_path, 'static')
-        return send_from_directory(static_folder, filename)
-    
     # Serve React frontend for all non-API routes
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -105,8 +111,15 @@ def create_app(config_class):
         if path.startswith('api/'):
             return {'error': 'API endpoint not found'}, 404
         
+        # Try to serve static files first (JS, CSS, images, etc.)
+        if path and '.' in path.split('/')[-1]:
+            try:
+                return send_from_directory(frontend_build_path, path)
+            except:
+                # If file not found, fall through to serve index.html
+                pass
+        
         # For all other paths, serve the React app's index.html
-        static_folder = os.path.join(app.root_path, 'static')
-        return send_from_directory(static_folder, 'index.html')
+        return send_from_directory(frontend_build_path, 'index.html')
     
     return app
