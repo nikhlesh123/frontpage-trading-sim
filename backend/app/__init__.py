@@ -1,11 +1,9 @@
 """
 Flask Application Factory
-
 This module contains the Flask application factory function.
 It initializes and configures the Flask application with all necessary extensions.
 """
-
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -13,6 +11,7 @@ from flask_cors import CORS
 from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import os
 
 # Initialize Flask extensions
 db = SQLAlchemy()
@@ -89,5 +88,25 @@ def create_app(config_class):
     @app.route('/api/health')
     def health_check():
         return {'status': 'healthy', 'message': 'Frontpage Trading Sim API is running'}
+    
+    # Serve React frontend static files
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        """Serve static files from the React build."""
+        static_folder = os.path.join(app.root_path, 'static')
+        return send_from_directory(static_folder, filename)
+    
+    # Serve React frontend for all non-API routes
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_react_app(path):
+        """Serve the React frontend for all non-API routes."""
+        # If the path starts with 'api', it should be handled by API routes
+        if path.startswith('api/'):
+            return {'error': 'API endpoint not found'}, 404
+        
+        # For all other paths, serve the React app's index.html
+        static_folder = os.path.join(app.root_path, 'static')
+        return send_from_directory(static_folder, 'index.html')
     
     return app
