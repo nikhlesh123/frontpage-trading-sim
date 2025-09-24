@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
 Frontpage Trading Sim - Flask Application Entry Point
-
 This is the main entry point for the Flask application.
 It creates the Flask app instance and runs the development server.
 """
-
 import os
 from app import create_app
 from config import config
@@ -50,5 +48,13 @@ def main():
         threaded=True
     )
 
+# Updated configuration for Render deployment
+port = int(os.environ.get('PORT', 10000))
 if __name__ == '__main__':
-    main()
+    # Get configuration environment
+    config_name = os.getenv('FLASK_CONFIG', 'default')
+    
+    # Create Flask app with configuration
+    app = create_app(config[config_name])
+    
+    app.run(host='0.0.0.0', port=port, debug=True)
